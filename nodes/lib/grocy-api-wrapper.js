@@ -141,8 +141,26 @@ class GrocyAPIWrapper {
                 }, error);
             }
             
-            // Enhance error messages for common SSL issues
-            if (error.message.includes('self-signed')) {
+            // Enhance error messages for common failure modes
+            const cause = error.cause || error;
+            const code = cause.code || error.code;
+
+            if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') {
+                throw new Error(
+                    `Cannot reach Grocy at ${this.baseUrl}: hostname not found (${code}). ` +
+                    'Check that the API URL is correct and reachable from this machine.'
+                );
+            } else if (code === 'ECONNREFUSED') {
+                throw new Error(
+                    `Connection refused to ${this.baseUrl}. ` +
+                    'Grocy may not be running or the port/URL is wrong.'
+                );
+            } else if (code === 'ECONNRESET' || code === 'ETIMEDOUT') {
+                throw new Error(
+                    `Connection to ${this.baseUrl} timed out or was reset (${code}). ` +
+                    'Check network connectivity and the timeout setting.'
+                );
+            } else if (error.message.includes('self-signed')) {
                 throw new Error(
                     'SSL Error: ' + error.message + '\n' +
                     'Solution: Enable "Allow self-signed certificates" in the Grocy configuration node.'
@@ -151,6 +169,12 @@ class GrocyAPIWrapper {
                 throw new Error(
                     'SSL Error: ' + error.message + '\n' +
                     'Solution: Check SSL settings in the Grocy configuration node.'
+                );
+            } else if (error.message === 'fetch failed' || error.message.includes('fetch failed')) {
+                throw new Error(
+                    `Network request to ${this.baseUrl} failed. ` +
+                    'Verify the API URL is reachable from the Node-RED server ' +
+                    '(not just from your browser). Cause: ' + (cause.message || error.message)
                 );
             }
             throw error;

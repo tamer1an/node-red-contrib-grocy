@@ -47,7 +47,7 @@
                     .show();
 
                 $.ajax({
-                    url: 'grocy/test-connection',
+                    url: (RED.settings.httpAdminRoot || '/').replace(/\/$/, '') + '/grocy/test-connection',
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({ apiUrl, apiKey, verifySsl, allowSelfSigned, timeout }),

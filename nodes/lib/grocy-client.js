@@ -285,6 +285,18 @@ class GrocyClient {
   }
 
   /**
+   * Execute an API operation via callback, used by operation handler modules.
+   * @param {Function} callback - Async function receiving the api instance
+   * @param {Object} context - Logging/debug context (unused internally)
+   * @param {Object} options - Reserved for future retry/timeout overrides
+   * @returns {Promise<*>} Result from callback
+   */
+  async executeOperation(callback, context = {}, options = {}) {
+    const api = await this.waitForReady();
+    return await callback(api);
+  }
+
+  /**
    * Get connection info
    * @returns {Object} Connection information
    */
