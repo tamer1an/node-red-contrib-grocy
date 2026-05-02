@@ -59,7 +59,7 @@ module.exports = function (RED) {
       // Execute operation through router
       try {
         const result = await this.router.execute(operation, payload, options, entityType);
-        
+
         this.debug('Operation completed successfully', {
           operation,
           resultType: typeof result,
@@ -68,10 +68,28 @@ module.exports = function (RED) {
 
         return result;
       } catch (error) {
-        // Enhance error with operation context
-        error.operation = operation;
-        error.category = this.router.getOperationCategory(operation);
-        throw error;
+        const connInfo = this.client ? this.client.getConnectionInfo() : {};
+        const category = this.router.getOperationCategory(operation);
+
+        const requestLines = [
+          `Operation : ${operation}`,
+          `Category  : ${category || 'unknown'}`,
+          entityType            ? `Entity    : ${entityType}` : null,
+          connInfo.apiUrl       ? `URL       : ${connInfo.apiUrl}` : null,
+          `Auth      : GROCY-API-KEY [redacted]`,
+          `Headers   : { "Content-Type": "application/json" }`,
+          `Body      : ${Object.keys(payload).length ? JSON.stringify(payload, null, 2) : '(empty)'}`,
+          Object.keys(options).length ? `Options   : ${JSON.stringify(options)}` : null,
+        ].filter(Boolean).join('\n');
+
+        const wrapped = new Error(
+          `${error.message}\n\n--- Request Details ---\n${requestLines}`
+        );
+        wrapped.cause = error;
+        wrapped.operation = operation;
+        wrapped.category = category;
+        wrapped.requestDetails = { operation, category, entityType, payload, options };
+        throw wrapped;
       }
     };
 
